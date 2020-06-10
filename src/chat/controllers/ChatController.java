@@ -6,17 +6,22 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import objects.User;
 
 import javax.swing.text.StyleConstants;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class ChatController {
 
@@ -114,6 +119,15 @@ public class ChatController {
                 if (inputLine.isFocused()){
                     chatMainField.requestFocus();
                 }
+            }
+        });
+
+        final FileChooser chooser = new FileChooser();
+        fileChooser.setOnAction(event -> {
+            inputLine.clear();
+            List<File> files = chooser.showOpenMultipleDialog(ChatWindow.getPrimaryStage());
+            if (files.size() > 0) {
+                System.out.println(files.size());
             }
         });
     }
