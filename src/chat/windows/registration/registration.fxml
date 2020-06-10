@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="800.0" style="-fx-background-color: FFCC99;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chat.controllers.RegistrationController">
+   <children>
+      <AnchorPane layoutY="119.0" prefHeight="382.0" prefWidth="800.0" style="-fx-background-color: E5FFCC;">
+         <children>
+            <Button fx:id="register" layoutX="319.0" layoutY="334.0" mnemonicParsing="false" prefHeight="34.0" prefWidth="151.0" style="-fx-background-color: FFCC99;" text="Зарегистрировать">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </Button>
+            <TextField fx:id="nick" alignment="CENTER" layoutX="303.0" layoutY="34.0" prefHeight="28.0" prefWidth="182.0" promptText="Имя">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </TextField>
+            <TextField fx:id="nickName" alignment="CENTER" layoutX="303.0" layoutY="86.0" prefHeight="28.0" prefWidth="182.0" promptText="nickname в чате">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </TextField>
+            <Button fx:id="back" layoutX="712.0" layoutY="334.0" mnemonicParsing="false" prefHeight="34.0" prefWidth="74.0" style="-fx-background-color: FFCC99;" text="Назад">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </Button>
+            <TextField fx:id="mail" alignment="CENTER" layoutX="303.0" layoutY="139.0" prefHeight="28.0" prefWidth="182.0" promptText="корпоративная почта">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </TextField>
+            <TextField fx:id="password" alignment="CENTER" layoutX="303.0" layoutY="191.0" prefHeight="28.0" prefWidth="182.0" promptText="пароль">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </TextField>
+            <TextField fx:id="passwordConfirm" alignment="CENTER" layoutX="303.0" layoutY="241.0" prefHeight="28.0" prefWidth="182.0" promptText="пароль еще раз">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </TextField>
+         </children>
+      </AnchorPane>
+      <Label layoutX="222.0" layoutY="27.0" text="Team Chat" textFill="#663300">
+         <font>
+            <Font name="Verdana" size="47.0" />
+         </font>
+      </Label>
+      <ImageView fitHeight="81.0" fitWidth="92.0" layoutX="489.0" layoutY="17.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../../../assets/main-label.png" />
+         </image>
+      </ImageView>
+   </children>
+</AnchorPane>
