@@ -89,11 +89,17 @@ public class MainWindowController {
         });
 
         authorization.setOnAction(event -> {
-            ChatWindow chatWindow = new ChatWindow();
-            try {
-                chatWindow.start(new Stage());
-            } catch (Exception e) {
-                e.printStackTrace();
+            ConnectionClient connectionClient = new ConnectionClient(MainWindow.connectedHost);
+            boolean onDuty = connectionClient.check();
+            if (MainWindow.connectedHost != null || onDuty) {
+                ChatWindow chatWindow = new ChatWindow();
+                try {
+                    chatWindow.start(new Stage());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                showAlertNoHostDetected();
             }
         });
 

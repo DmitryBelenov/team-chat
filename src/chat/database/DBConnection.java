@@ -9,6 +9,9 @@ import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class DBConnection {
 
@@ -38,7 +41,34 @@ public class DBConnection {
         return res;
     }
 
+    public static List<UserEntity> getUsers(String alias){
+        List<UserEntity> users = new ArrayList<>();
+        SqlSessionFactory sqlSessionFactory = getFactory();
+        if (sqlSessionFactory != null) {
+            try (SqlSession session = sqlSessionFactory.openSession(true)) {
+                UserMapper userMapper = session.getMapper(UserMapper.class);
+                users = getUsersByAlias(alias, userMapper);
+            }
+        }
+        return users;
+    }
 
+    private static List<UserEntity> getUsersByAlias(String alias, UserMapper userMapper){
+        List<UserEntity> list = new ArrayList<>();
+        if ("all".equals(alias)){
+            list = userMapper.getAllUsers();
+        } else if (alias.startsWith("group_")){
+            List<String> ids = userMapper.getGroupUserIds(alias.substring(7));
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            for (String id : ids){
+                sb.append("'").append(id).append("'").append(i == ids.size()-1 ? "" : ",");
+                i++;
+            }
+            list = userMapper.getGroupUsers(sb.toString());
+        }
+        return list;
+    }
 }
 
 

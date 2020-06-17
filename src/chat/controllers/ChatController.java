@@ -1,8 +1,11 @@
 package chat.controllers;
 
+import chat.database.entity.UserEntity;
 import chat.objects.Group;
 import chat.objects.User;
+import chat.socket.client.users.list.UserListClient;
 import chat.windows.chat.ChatWindow;
+import chat.windows.group.CreateGroupWindow;
 import chat.windows.main.MainWindow;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -73,7 +76,7 @@ public class ChatController {
         groupPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         chatScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
-        usersListInitialization();
+        usersListInitialization("all");
         groupsListInitialization();
 
         logOut.setOnAction(event -> {
@@ -86,14 +89,29 @@ public class ChatController {
             }
         });
 
+        createGroup.setOnAction(event -> {
+            UserListClient userListClient = new UserListClient(MainWindow.connectedHost, "all");
+            List<UserEntity> userEntities = userListClient.get();
+            if (userEntities.size() > 0) {
+                CreateGroupWindow createGroupWindow = new CreateGroupWindow();
+                try {
+                    createGroupWindow.start(new Stage());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                showAlertNoUsersForGroupCreating();
+            }
+        });
+
         send.setOnAction(event -> {
             inputLine.clear();
         });
 
         inputLine.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER){
+            if (event.getCode() == KeyCode.ENTER) {
                 inputLine.clear();
-                if (inputLine.isFocused()){
+                if (inputLine.isFocused()) {
                     chatMainField.requestFocus();
                 }
             }
@@ -103,7 +121,7 @@ public class ChatController {
         fileChooser.setOnAction(event -> {
             inputLine.clear();
             List<File> files = chooser.showOpenMultipleDialog(ChatWindow.getPrimaryStage());
-            if (files.size() > 0) {
+            if (files != null && files.size() > 0) {
                 System.out.println(files.size());
             }
         });
@@ -117,16 +135,16 @@ public class ChatController {
             chatsPane.getTabs().addAll(chats);
     }
 
-    private List<Tab> fillTabs(){
+    private List<Tab> fillTabs() {
         //groups
         List<Tab> tabs = new ArrayList<>();
-        for (int i=0; i<2; i++){
-            tabs.add(fillTab("text area content - "+i, ("new - "+i)));
+        for (int i = 0; i < 2; i++) {
+            tabs.add(fillTab("text area content - " + i, ("new - " + i)));
         }
         return tabs;
     }
 
-    private Tab fillTab(String textAreaContent, String tabName){
+    private Tab fillTab(String textAreaContent, String tabName) {
         Tab tab = new Tab(tabName);
 
         TextArea textArea = new TextArea();
@@ -154,9 +172,9 @@ public class ChatController {
         textField.setFont(font);
         textField.setPromptText("Введите текст");
         textField.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER){
+            if (event.getCode() == KeyCode.ENTER) {
                 textField.clear();
-                if (textField.isFocused()){
+                if (textField.isFocused()) {
                     textArea.requestFocus();
                 }
             }
@@ -184,7 +202,7 @@ public class ChatController {
         file.setOnAction(event -> {
             textField.clear();
             List<File> files = chooser.showOpenMultipleDialog(ChatWindow.getPrimaryStage());
-            if (files.size() > 0) {
+            if (files != null && files.size() > 0) {
                 System.out.println(files.size());
             }
         });
@@ -194,67 +212,80 @@ public class ChatController {
         tabContent.setPrefHeight(180);
 
         tab.setContent(tabContent);
+        tab.setOnClosed(event -> {
+            openedTabs.remove(tabName);
+        });
 
-        return  tab;
+        return tab;
     }
 
     @SuppressWarnings("unchecked")
-    private void usersListInitialization(){
-        ObservableList<User> data = FXCollections.observableArrayList(
-                new User("dmitry", "on"),
-                new User("vasya", "off"),
-                new User("dmitryB", "on"));
+    private void usersListInitialization(String alias) {
+        UserListClient userListClient = new UserListClient(MainWindow.connectedHost, alias);
+        List<UserEntity> users = userListClient.get();
 
-        TableColumn nickColumn = new TableColumn("nick");
-        nickColumn.setCellValueFactory(new PropertyValueFactory<User,String>("nick"));
+        if (users.size() > 0) {
+            List<User> list = new ArrayList<>();
 
-        TableColumn stateColumn = new TableColumn("state");
-        stateColumn.setCellValueFactory(new PropertyValueFactory<User,String>("state"));
+            for (UserEntity user : users) {
+                User listUser = new User(user.getNickname(), user.isOnline() ? "on" : "off");
+                list.add(listUser);
+            }
 
-        nickColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.63));
-        stateColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.3));
+            ObservableList<User> data = FXCollections.observableArrayList(list);
 
-        nickColumn.setResizable(false);
-        stateColumn.setResizable(false);
+            TableColumn nickColumn = new TableColumn("nick");
+            nickColumn.setCellValueFactory(new PropertyValueFactory<User, String>("nick"));
 
-        usersTable.setItems(data);
-        usersTable.getColumns().addAll(nickColumn, stateColumn);
+            TableColumn stateColumn = new TableColumn("state");
+            stateColumn.setCellValueFactory(new PropertyValueFactory<User, String>("state"));
 
-        usersTable.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Object>) (observableValue, oldValue, newValue) -> {
-            if (usersTable.getSelectionModel().getSelectedItem() != null) {
-                TableView.TableViewSelectionModel<User> selectionModel = usersTable.getSelectionModel();
-                ObservableList<?> selectedCells = selectionModel.getSelectedCells();
-                @SuppressWarnings("unchecked")
-                TablePosition<Object, ?> tablePosition = (TablePosition<Object, ?>) selectedCells.get(0);
-                Object val = tablePosition.getTableColumn().getCellData(newValue);
+            nickColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.63));
+            stateColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.3));
 
-                String nickname = val.toString();
-                if (!openedTabs.contains(nickname)){
-                    Tab userTab = fillTab("", nickname);
-                    openedTabs.add(nickname);
-                    chatsPane.getTabs().add(userTab);
-                } else {
-                    List<Tab> allTabs = chatsPane.getTabs();
-                    for (Tab tab : allTabs){
-                        if (tab.getText().equals(nickname)){
-                            SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
-                            sm.select(tab);
+            nickColumn.setResizable(false);
+            stateColumn.setResizable(false);
+
+            usersTable.setItems(data);
+            usersTable.getColumns().clear();
+            usersTable.getColumns().addAll(nickColumn, stateColumn);
+
+            usersTable.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Object>) (observableValue, oldValue, newValue) -> {
+                if (usersTable.getSelectionModel().getSelectedItem() != null) {
+                    TableView.TableViewSelectionModel<User> selectionModel = usersTable.getSelectionModel();
+                    ObservableList<?> selectedCells = selectionModel.getSelectedCells();
+                    @SuppressWarnings("unchecked")
+                    TablePosition<Object, ?> tablePosition = (TablePosition<Object, ?>) selectedCells.get(0);
+                    Object val = tablePosition.getTableColumn().getCellData(newValue);
+
+                    String nickname = val.toString();
+                    if (!openedTabs.contains(nickname)) {
+                        Tab userTab = fillTab("", nickname);
+                        openedTabs.add(nickname);
+                        chatsPane.getTabs().add(userTab);
+                    } else {
+                        List<Tab> allTabs = chatsPane.getTabs();
+                        for (Tab tab : allTabs) {
+                            if (tab.getText().equals(nickname)) {
+                                SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
+                                sm.select(tab);
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private void groupsListInitialization(){
+    private void groupsListInitialization() {
         ObservableList<Group> groupData = FXCollections.observableArrayList(
                 new Group("Разработка"),
                 new Group("Разное"),
                 new Group("Проверка"));
 
         TableColumn nameColumn = new TableColumn("name");
-        nameColumn.setCellValueFactory(new PropertyValueFactory<User,String>("name"));
+        nameColumn.setCellValueFactory(new PropertyValueFactory<User, String>("name"));
 
         nameColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.9));
         nameColumn.setResizable(false);
@@ -271,14 +302,14 @@ public class ChatController {
                 Object val = tablePosition.getTableColumn().getCellData(newValue);
 
                 String name = val.toString();
-                if (!openedTabs.contains(name)){
+                if (!openedTabs.contains(name)) {
                     Tab userTab = fillTab("", name);
                     openedTabs.add(name);
                     chatsPane.getTabs().add(userTab);
                 } else {
                     List<Tab> allTabs = chatsPane.getTabs();
-                    for (Tab tab : allTabs){
-                        if (tab.getText().equals(name)){
+                    for (Tab tab : allTabs) {
+                        if (tab.getText().equals(name)) {
                             SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
                             sm.select(tab);
                         }
@@ -286,5 +317,13 @@ public class ChatController {
                 }
             }
         });
+    }
+
+    private void showAlertNoUsersForGroupCreating() {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Внимание!");
+        alert.setHeaderText("Нет зарегистрированных пользователей для добавления в группу");
+
+        alert.showAndWait();
     }
 }
