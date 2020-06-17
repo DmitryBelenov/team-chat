@@ -9,6 +9,8 @@ import javafx.stage.Stage;
 
 public class MainWindow extends Application implements Window {
 
+    public static volatile String connectedHost;
+    public static volatile boolean serverStartButton;
     public static Stage stage;
 
     @Override
@@ -19,6 +21,7 @@ public class MainWindow extends Application implements Window {
         stage.setTitle("Team Chat");
         stage.setResizable(false);
         stage.setScene(scene);
+        stage.setOnCloseRequest(event -> System.exit(0));
         stage.show();
     }
 

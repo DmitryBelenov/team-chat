@@ -20,6 +20,7 @@ public class ChatWindow extends Application implements Window {
         stage.setTitle("Team Chat");
         stage.setResizable(false);
         stage.setScene(scene);
+        stage.setOnCloseRequest(event -> System.exit(0));
         stage.show();
         MainWindow.stage.close();
     }

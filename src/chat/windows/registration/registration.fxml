@@ -17,7 +17,7 @@
                   <Font name="Verdana" size="12.0" />
                </font>
             </Button>
-            <TextField fx:id="nick" alignment="CENTER" layoutX="303.0" layoutY="34.0" prefHeight="28.0" prefWidth="182.0" promptText="Имя">
+            <TextField fx:id="name" alignment="CENTER" layoutX="303.0" layoutY="34.0" prefHeight="28.0" prefWidth="182.0" promptText="Имя">
                <font>
                   <Font name="Verdana" size="12.0" />
                </font>
@@ -56,7 +56,7 @@
       </Label>
       <ImageView fitHeight="81.0" fitWidth="92.0" layoutX="489.0" layoutY="17.0" pickOnBounds="true" preserveRatio="true">
          <image>
-            <Image url="@../../../assets/main-label.png" />
+            <Image url="@../../assets/main-label.png" />
          </image>
       </ImageView>
    </children>

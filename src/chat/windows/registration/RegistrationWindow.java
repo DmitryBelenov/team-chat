@@ -1,6 +1,5 @@
 package chat.windows.registration;
 
-import chat.controllers.MainWindowController;
 import chat.windows.Window;
 import chat.windows.main.MainWindow;
 import javafx.application.Application;
@@ -21,6 +20,7 @@ public class RegistrationWindow extends Application implements Window {
         stage.setTitle("Team Chat");
         stage.setResizable(false);
         stage.setScene(scene);
+        stage.setOnCloseRequest(event -> System.exit(0));
         stage.show();
         MainWindow.stage.close();
     }

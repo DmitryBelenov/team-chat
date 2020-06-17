@@ -19,9 +19,9 @@
    <children>
       <AnchorPane layoutY="91.0" prefHeight="410.0" prefWidth="800.0" style="-fx-background-color: E5FFCC;">
          <children>
-            <ScrollPane fx:id="usersPane" layoutX="582.0" layoutY="-93.0" prefHeight="686.0" prefWidth="218.0">
+            <ScrollPane fx:id="usersPane" layoutX="582.0" layoutY="-93.0" prefHeight="372.0" prefWidth="218.0">
                <content>
-                  <TableView fx:id="usersTable" prefHeight="685.0" prefWidth="219.0" />
+                  <TableView fx:id="usersTable" prefHeight="361.0" prefWidth="219.0" />
                </content>
             </ScrollPane>
             <TabPane fx:id="chatsPane" prefHeight="589.0" prefWidth="583.0" tabClosingPolicy="UNAVAILABLE">
@@ -60,6 +60,11 @@
                   </Tab>
                </tabs>
             </TabPane>
+            <ScrollPane fx:id="groupPane" layoutX="583.0" layoutY="279.0" prefHeight="310.0" prefWidth="218.0">
+               <content>
+                  <TableView fx:id="groupTable" prefHeight="309.0" prefWidth="217.0" />
+               </content>
+            </ScrollPane>
          </children>
       </AnchorPane>
       <Label layoutX="14.0" layoutY="14.0" text="Team Chat" textFill="#663300">
@@ -69,7 +74,7 @@
       </Label>
       <ImageView fitHeight="81.0" fitWidth="92.0" layoutX="280.0" layoutY="5.0" pickOnBounds="true" preserveRatio="true">
          <image>
-            <Image url="@../../../assets/main-label.png" />
+            <Image url="@../../assets/main-label.png" />
          </image>
       </ImageView>
       <MenuButton fx:id="menu" layoutX="500.0" layoutY="14.0" mnemonicParsing="false" prefHeight="17.0" prefWidth="71.0" style="-fx-background-color: FFB266;" text="Меню">

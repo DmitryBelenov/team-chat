@@ -2,6 +2,8 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
@@ -12,11 +14,6 @@
    <children>
       <AnchorPane layoutY="119.0" prefHeight="382.0" prefWidth="800.0" style="-fx-background-color: E5FFCC;">
          <children>
-            <Button fx:id="registration" layoutX="662.0" layoutY="334.0" mnemonicParsing="false" prefHeight="34.0" prefWidth="124.0" style="-fx-background-color: FFCC99;" text="Регистрация">
-               <font>
-                  <Font name="Verdana" size="12.0" />
-               </font>
-            </Button>
             <TextField fx:id="login" alignment="CENTER" layoutX="303.0" layoutY="34.0" prefHeight="28.0" prefWidth="182.0" promptText="Логин">
                <font>
                   <Font name="Verdana" size="12.0" />
@@ -32,6 +29,26 @@
                   <Font name="Verdana" size="12.0" />
                </font>
             </Button>
+            <Button fx:id="registration" layoutX="662.0" layoutY="334.0" mnemonicParsing="false" prefHeight="34.0" prefWidth="124.0" style="-fx-background-color: FFCC99;" text="Регистрация">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </Button>
+            <Label fx:id="connectionLabel" layoutX="14.0" layoutY="334.0" prefHeight="34.0" prefWidth="113.0" text="No connection">
+               <font>
+                  <Font name="Verdana" size="12.0" />
+               </font>
+            </Label>
+            <ImageView fx:id="connectionIcon" fitHeight="18.0" fitWidth="20.0" layoutX="127.0" layoutY="342.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@../../assets/no_connection.png" />
+               </image>
+            </ImageView>
+            <Label fx:id="waitSign" layoutX="264.0" layoutY="202.0" prefHeight="40.0" prefWidth="286.0" textFill="#ab783d">
+               <font>
+                  <Font name="Verdana" size="22.0" />
+               </font>
+            </Label>
          </children>
       </AnchorPane>
       <Label layoutX="222.0" layoutY="27.0" text="Team Chat" textFill="#663300">
@@ -41,8 +58,17 @@
       </Label>
       <ImageView fitHeight="81.0" fitWidth="92.0" layoutX="489.0" layoutY="17.0" pickOnBounds="true" preserveRatio="true">
          <image>
-            <Image url="@../../../assets/main-label.png" />
+            <Image url="@../../assets/main-label.png" />
          </image>
       </ImageView>
+      <MenuButton fx:id="serverMenu" layoutX="705.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="81.0" style="-fx-background-color: FFCC99;" text="Сервер">
+        <items>
+          <MenuItem fx:id="connect" mnemonicParsing="false" text="Подключиться" />
+          <MenuItem fx:id="start" mnemonicParsing="false" text="Стартовать" />
+        </items>
+         <font>
+            <Font name="Verdana" size="12.0" />
+         </font>
+      </MenuButton>
    </children>
 </AnchorPane>
