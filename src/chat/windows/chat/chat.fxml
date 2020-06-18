@@ -26,7 +26,7 @@
             </ScrollPane>
             <TabPane fx:id="chatsPane" prefHeight="589.0" prefWidth="583.0" tabClosingPolicy="UNAVAILABLE">
                <tabs>
-                  <Tab fx:id="currentChat" closable="false" text="Чат">
+                  <Tab fx:id="currentChat" closable="false" text="Public">
                     <content>
                       <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                            <children>

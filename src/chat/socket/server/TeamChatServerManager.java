@@ -1,5 +1,7 @@
 package chat.socket.server;
 
+import chat.socket.server.message.MessageDeliveryServer;
+import chat.socket.server.message.MessageServer;
 import chat.socket.server.registration.RegistrationServer;
 import chat.socket.server.service.OnDutyServer;
 import chat.socket.server.users.list.UserListServer;
@@ -15,6 +17,8 @@ public class TeamChatServerManager {
     private RegistrationServer registrationServer;
     private OnDutyServer onDutyServer;
     private UserListServer userListServer;
+    private MessageServer messageServer;
+    private MessageDeliveryServer messageDeliveryServer;
 
     public static List<Thread> threadList = Collections.synchronizedList(new ArrayList<>());
 
@@ -22,12 +26,16 @@ public class TeamChatServerManager {
         registrationServer = new RegistrationServer();
         onDutyServer = new OnDutyServer();
         userListServer = new UserListServer();
+        messageServer = new MessageServer();
+        messageDeliveryServer = new MessageDeliveryServer();
     }
 
     public void startCommonServer(){
         registrationServer.startMultiThreadHandler();
         onDutyServer.startMultiThreadHandler();
         userListServer.startMultiThreadHandler();
+        messageServer.startMultiThreadHandler();
+        messageDeliveryServer.startMultiThreadHandler();
 
         showServerInfo();
         MainWindow.serverStartButton = true;

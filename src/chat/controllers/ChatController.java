@@ -1,9 +1,13 @@
 package chat.controllers;
 
+import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
 import chat.objects.Group;
 import chat.objects.User;
+import chat.socket.client.message.MessageClient;
+import chat.socket.client.message.MessageDeliveryClient;
 import chat.socket.client.users.list.UserListClient;
+import chat.socket.server.message.MessageDeliveryServer;
 import chat.windows.chat.ChatWindow;
 import chat.windows.group.CreateGroupWindow;
 import chat.windows.main.MainWindow;
@@ -20,13 +24,17 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ChatController {
 
     private List<String> openedTabs = Collections.synchronizedList(new ArrayList<>());
+    private ScheduledExecutorService ses;
+    private Map<String, TextArea> chatFieldMap = Collections.synchronizedMap(new HashMap<>());
 
     @FXML
     private ScrollPane usersPane;
@@ -71,7 +79,14 @@ public class ChatController {
     private TableView<Group> groupTable;
 
     @FXML
-    void initialize() {
+    public void initialize() {
+        chatFieldMap.put("Public",chatMainField);
+
+        if (!ChatWindow.chatSchedulerStarted) {
+            chatsRefreshScheduler();
+            ChatWindow.chatSchedulerStarted = true;
+        }
+
         usersPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         groupPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         chatScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -82,6 +97,9 @@ public class ChatController {
         logOut.setOnAction(event -> {
             MainWindow mainWindow = new MainWindow();
             try {
+                ChatWindow.chatSchedulerStarted = false;
+                ses.shutdown();
+
                 ChatWindow.stage.close();
                 mainWindow.start(new Stage());
             } catch (Exception e) {
@@ -105,14 +123,21 @@ public class ChatController {
         });
 
         send.setOnAction(event -> {
-            inputLine.clear();
+            String msg = inputLine.getText().trim();
+            if (msg.length() > 0) {
+                sendMessage(msg, "Public", true);
+                chatMainField.appendText(msg+"\n");
+                inputLine.clear();
+            }
         });
 
         inputLine.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
-                inputLine.clear();
-                if (inputLine.isFocused()) {
-                    chatMainField.requestFocus();
+                String msg = inputLine.getText().trim();
+                if (msg.length() > 0) {
+                    sendMessage(msg, "Public", true);
+                    chatMainField.appendText(msg+"\n");
+                    inputLine.clear();
                 }
             }
         });
@@ -139,12 +164,12 @@ public class ChatController {
         //groups
         List<Tab> tabs = new ArrayList<>();
         for (int i = 0; i < 2; i++) {
-            tabs.add(fillTab("text area content - " + i, ("new - " + i)));
+            tabs.add(fillTab("text area content - " + i, ("new - " + i), false));
         }
         return tabs;
     }
 
-    private Tab fillTab(String textAreaContent, String tabName) {
+    private Tab fillTab(String textAreaContent, String tabName, boolean group) {
         Tab tab = new Tab(tabName);
 
         TextArea textArea = new TextArea();
@@ -153,6 +178,8 @@ public class ChatController {
         textArea.setPrefHeight(529);
         textArea.setPrefWidth(583);
         textArea.setText(textAreaContent);
+
+        chatFieldMap.put(tabName, textArea);
 
         AnchorPane scrollContent = new AnchorPane(textArea);
         scrollContent.setPrefWidth(582);
@@ -173,9 +200,11 @@ public class ChatController {
         textField.setPromptText("Введите текст");
         textField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
-                textField.clear();
-                if (textField.isFocused()) {
-                    textArea.requestFocus();
+                String msg = textField.getText().trim();
+                if (msg.length() > 0){
+                    sendMessage(msg, tabName, group);
+                    textArea.appendText(msg+"\n");
+                    textField.clear();
                 }
             }
         });
@@ -188,7 +217,12 @@ public class ChatController {
         send.setPrefWidth(50);
         send.setFont(font);
         send.setOnAction(event -> {
-            textField.clear();
+            String msg = textField.getText().trim();
+            if (msg.length() > 0) {
+                sendMessage(msg, tabName, group);
+                textArea.appendText(msg+"\n");
+                textField.clear();
+            }
         });
 
         Button file = new Button("Файл");
@@ -260,7 +294,7 @@ public class ChatController {
 
                     String nickname = val.toString();
                     if (!openedTabs.contains(nickname)) {
-                        Tab userTab = fillTab("", nickname);
+                        Tab userTab = fillTab("", nickname, false);
                         openedTabs.add(nickname);
                         chatsPane.getTabs().add(userTab);
                     } else {
@@ -303,7 +337,7 @@ public class ChatController {
 
                 String name = val.toString();
                 if (!openedTabs.contains(name)) {
-                    Tab userTab = fillTab("", name);
+                    Tab userTab = fillTab("", name, true);
                     openedTabs.add(name);
                     chatsPane.getTabs().add(userTab);
                 } else {
@@ -325,5 +359,44 @@ public class ChatController {
         alert.setHeaderText("Нет зарегистрированных пользователей для добавления в группу");
 
         alert.showAndWait();
+    }
+
+    private void sendMessage(String msg, String nameTo, boolean groupMsg){
+        MessageEntity message = new MessageEntity();
+        message.setId(UUID.randomUUID().toString());
+        message.setMsgText(msg);
+        message.setFromId(ChatWindow.authorizedUserId);
+        message.setToId(nameTo);
+        message.setGroupMsg(groupMsg);
+        message.setSendDate(new Date());
+        message.setReceived(false);
+
+        MessageClient messageClient = new MessageClient(MainWindow.connectedHost, message);
+        messageClient.send();
+    }
+
+    private void chatsRefreshScheduler(){
+        ses = Executors.newSingleThreadScheduledExecutor();
+        ses.scheduleWithFixedDelay(() -> {
+                CompletableFuture<Void> refresh = CompletableFuture.runAsync(this::refreshHistory);
+                try {
+                    refresh.get();
+                } catch (Exception e) {
+                    System.out.println("Unable to refresh chats:" + e);
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+    }
+
+    private void refreshHistory(){
+        MessageDeliveryClient messageDeliveryClient = new MessageDeliveryClient(MainWindow.connectedHost, ChatWindow.authorizedUserId);
+        List<MessageEntity> messages = messageDeliveryClient.refresh();
+        if (messages.size() > 0){
+            if (chatFieldMap.size() > 0){
+                for (MessageEntity me : messages) {
+                    TextArea chatTextArea = chatFieldMap.get(me.getFromId());
+                    chatTextArea.appendText(me.getMsgText()+"\n");
+                }
+            }
+        }
     }
 }
