@@ -3,6 +3,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
@@ -14,10 +15,10 @@
             <Font name="Verdana" size="12.0" />
          </font>
       </TextField>
-      <ScrollPane layoutY="152.0" prefHeight="228.0" prefWidth="359.0">
-        <content>
-          <AnchorPane fx:id="usersPane" minHeight="0.0" minWidth="0.0" prefHeight="232.0" prefWidth="358.0" />
-        </content>
+      <ScrollPane fx:id="userScrollPane" layoutY="152.0" prefHeight="228.0" prefWidth="359.0">
+         <content>
+            <TableView fx:id="usersTableView" prefHeight="227.0" prefWidth="344.0" />
+         </content>
       </ScrollPane>
       <Label layoutX="141.0" layoutY="24.0" prefHeight="33.0" prefWidth="78.0" text="Имя группы">
          <font>
