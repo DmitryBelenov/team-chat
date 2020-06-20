@@ -11,6 +11,7 @@ import chat.socket.server.message.MessageDeliveryServer;
 import chat.windows.chat.ChatWindow;
 import chat.windows.group.CreateGroupWindow;
 import chat.windows.main.MainWindow;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -43,7 +44,7 @@ public class ChatController {
     private TableView<User> usersTable;
 
     @FXML
-    private TabPane chatsPane;
+    private volatile TabPane chatsPane;
 
     @FXML
     private Tab currentChat;
@@ -150,8 +151,6 @@ public class ChatController {
                 System.out.println(files.size());
             }
         });
-
-        chatMainField.setText("Example main chat");
 
         chatsPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
 
@@ -262,8 +261,10 @@ public class ChatController {
             List<User> list = new ArrayList<>();
 
             for (UserEntity user : users) {
-                User listUser = new User(user.getNickname(), user.isOnline() ? "on" : "off");
-                list.add(listUser);
+                if (!user.getId().equals(ChatWindow.authorizedUserId)) {
+                    User listUser = new User(user.getNickname(), user.isOnline() ? "on" : "off");
+                    list.add(listUser);
+                }
             }
 
             ObservableList<User> data = FXCollections.observableArrayList(list);
@@ -378,21 +379,39 @@ public class ChatController {
     private void chatsRefreshScheduler(){
         ses = Executors.newSingleThreadScheduledExecutor();
         ses.scheduleWithFixedDelay(() -> {
-                CompletableFuture<Void> refresh = CompletableFuture.runAsync(this::refreshHistory);
+                CompletableFuture<Void> blockJson = CompletableFuture.runAsync(() ->
+                {
+                    Platform.runLater(this::refreshHistory);
+                });
                 try {
-                    refresh.get();
+                    blockJson.get();
                 } catch (Exception e) {
-                    System.out.println("Unable to refresh chats:" + e);
+                    System.out.println("Unable to get new block:" + e);
                 }
-            }, 0, 1, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
-    private void refreshHistory(){
+    private synchronized void refreshHistory(){
         MessageDeliveryClient messageDeliveryClient = new MessageDeliveryClient(MainWindow.connectedHost, ChatWindow.authorizedUserId);
         List<MessageEntity> messages = messageDeliveryClient.refresh();
         if (messages.size() > 0){
             if (chatFieldMap.size() > 0){
                 for (MessageEntity me : messages) {
+                    String tabName = me.getFromId();
+                    if (!openedTabs.contains(tabName)) {
+                        Tab userTab = fillTab("", tabName, false);
+                        openedTabs.add(tabName);
+                        chatsPane.getTabs().add(userTab);
+                    } else {
+                        List<Tab> allTabs = chatsPane.getTabs();
+                        for (Tab tab : allTabs) {
+                            if (tab.getText().equals(tabName)) {
+                                SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
+                                sm.select(tab);
+                            }
+                        }
+                    }
+
                     TextArea chatTextArea = chatFieldMap.get(me.getFromId());
                     chatTextArea.appendText(me.getMsgText()+"\n");
                 }

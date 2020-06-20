@@ -29,8 +29,6 @@ public class MessageDeliveryHandler implements Runnable {
 
             oos.flush();
             socket.close();
-
-            socket.close();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }

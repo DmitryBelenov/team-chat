@@ -3,10 +3,7 @@ package chat.database.mappers;
 import chat.database.entity.GroupEntity;
 import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
@@ -23,21 +20,47 @@ public interface GlobalMapper {
             " values (#{id}, #{msgText}, #{fromId}, #{toId}, #{fileName}, #{groupMsg}, #{sendDate}, #{received})")
     boolean sendMessage(MessageEntity message);
 
+    @Results({
+            @Result(property = "userRole", column = "user_role"),
+            @Result(property = "passwordHex", column = "password_hex"),
+            @Result(property = "createDate", column = "create_date")
+    })
     @Select("SELECT * FROM users WHERE blocked = false")
     List<UserEntity> getAllUsers();
 
     @Select("SELECT user_id FROM groups WHERE id = #{id}")
     List<String> getGroupUserIds(String groupId);
 
+    @Results({
+            @Result(property = "userRole", column = "user_role"),
+            @Result(property = "passwordHex", column = "password_hex"),
+            @Result(property = "createDate", column = "create_date")
+    })
     @Select("SELECT * FROM users WHERE id IN (#{Ids})")
     List<UserEntity> getGroupUsers(String userIds);
 
-    @Select("select * from messages where to_id = #{nickname} order by send_date desc")
+    @Results({
+            @Result(property = "msgText", column = "msg_text"),
+            @Result(property = "fromId", column = "from_id"),
+            @Result(property = "toId", column = "to_id"),
+            @Result(property = "fileName", column = "file_name"),
+            @Result(property = "groupMsg", column = "group_msg"),
+            @Result(property = "sendDate", column = "send_date")
+    })
+    @Select("select * from messages where to_id = #{nickname} and received=false order by send_date desc")
     List<MessageEntity> getIncomingPrivateMessages(String nickname);
 
     @Select("select nickname from users where id = #{id}")
     String getNickNameById(String id);
 
-    @Update("update messages set received = true where id in (#{ids})")
-    void setReceivedMessages(String ids);
+    @Update("UPDATE messages SET received=true WHERE id=#{id}")
+    void setReceivedMessage(String id);
+
+    @Results({
+            @Result(property = "userRole", column = "user_role"),
+            @Result(property = "passwordHex", column = "password_hex"),
+            @Result(property = "createDate", column = "create_date")
+    })
+    @Select("SELECT * FROM users WHERE nickname=#{login} and password_hex=#{password}")
+    UserEntity getUser(@Param("login") String login, @Param("password") String password);
 }

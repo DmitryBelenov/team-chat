@@ -41,7 +41,7 @@ public class ConnectionClient {
     private void lostConnectionError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Соединение прервано");
-        alert.setContentText("Хост "+host+" не доступен.\nПопробуйте повторное подключение");
+        alert.setContentText("Хост "+host+" не доступен.\nПопробуйте повторное подключение или введите другой IP адрес");
 
         alert.showAndWait();
     }

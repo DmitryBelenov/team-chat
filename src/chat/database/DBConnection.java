@@ -4,6 +4,7 @@ import chat.database.entity.GroupEntity;
 import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
 import chat.database.mappers.GlobalMapper;
+import chat.utils.CryptoUtils;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -11,6 +12,7 @@ import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,8 +61,8 @@ public class DBConnection {
                     for (MessageEntity msg : messages){
                         String fromNick = getNickNameById(msg.getFromId());
                         msg.setFromId(fromNick);
+                        setReceivedMessage(msg.getId());
                     }
-                    setReceivedMessages(messages);
                 }
             }
         }
@@ -79,18 +81,12 @@ public class DBConnection {
         return nickname;
     }
 
-    private static void setReceivedMessages(List<MessageEntity> messages){
+    private static void setReceivedMessage(String id){
         SqlSessionFactory sqlSessionFactory = getFactory();
         if (sqlSessionFactory != null) {
             try (SqlSession session = sqlSessionFactory.openSession(true)) {
                 GlobalMapper globalMapper = session.getMapper(GlobalMapper.class);
-                int i=0;
-                StringBuilder ids = new StringBuilder();
-                for (MessageEntity me : messages){
-                    ids.append("'").append(me.getId()).append("'").append(i == messages.size()-1 ? "" : ",");
-                    i++;
-                }
-                globalMapper.setReceivedMessages(ids.toString());
+                globalMapper.setReceivedMessage(id);
             }
         }
     }
@@ -122,6 +118,26 @@ public class DBConnection {
             list = globalMapper.getGroupUsers(sb.toString());
         }
         return list;
+    }
+
+    public static synchronized UserEntity authorization(String[] userAuthData){
+        UserEntity user = null;
+        SqlSessionFactory sqlSessionFactory = getFactory();
+        if (sqlSessionFactory != null) {
+            try (SqlSession session = sqlSessionFactory.openSession(true)) {
+                GlobalMapper globalMapper = session.getMapper(GlobalMapper.class);
+
+                String password = "";
+                try {
+                    password = CryptoUtils.getHexBase64(userAuthData[1]);
+                } catch (NoSuchAlgorithmException nsa){
+                    nsa.printStackTrace();
+                }
+                String login = userAuthData[0];
+                user = globalMapper.getUser(login, password);
+            }
+        }
+        return user;
     }
 }
 

@@ -1,5 +1,6 @@
 package chat.socket.server;
 
+import chat.socket.server.auth.AuthorizationServer;
 import chat.socket.server.message.MessageDeliveryServer;
 import chat.socket.server.message.MessageServer;
 import chat.socket.server.registration.RegistrationServer;
@@ -19,6 +20,7 @@ public class TeamChatServerManager {
     private UserListServer userListServer;
     private MessageServer messageServer;
     private MessageDeliveryServer messageDeliveryServer;
+    private AuthorizationServer authorizationServer;
 
     public static List<Thread> threadList = Collections.synchronizedList(new ArrayList<>());
 
@@ -28,6 +30,7 @@ public class TeamChatServerManager {
         userListServer = new UserListServer();
         messageServer = new MessageServer();
         messageDeliveryServer = new MessageDeliveryServer();
+        authorizationServer = new AuthorizationServer();
     }
 
     public void startCommonServer(){
@@ -36,6 +39,7 @@ public class TeamChatServerManager {
         userListServer.startMultiThreadHandler();
         messageServer.startMultiThreadHandler();
         messageDeliveryServer.startMultiThreadHandler();
+        authorizationServer.startMultiThreadHandler();
 
         showServerInfo();
         MainWindow.serverStartButton = true;
@@ -43,8 +47,8 @@ public class TeamChatServerManager {
 
     private void showServerInfo() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Локальный сервер");
-        alert.setHeaderText("Локальный сервер запущен\nДля его остановки перезапустите Team Chat");
+        alert.setTitle("Сервер");
+        alert.setHeaderText("Локальный сервер запущен");
 
         alert.showAndWait();
     }

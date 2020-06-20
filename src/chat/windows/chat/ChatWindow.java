@@ -11,8 +11,7 @@ import javafx.stage.Stage;
 public class ChatWindow extends Application implements Window {
 
     public static Stage stage;
-//    public static String authorizedUserId = "6a37d956-55ee-4231-b2de-3a921472742f"; //booleanJ
-    public static String authorizedUserId = "c6d63e86-2e3e-4271-b0bf-c1f8fe0b3145"; //vasytka
+    public static String authorizedUserId;
 
     public static boolean chatSchedulerStarted = false;
 

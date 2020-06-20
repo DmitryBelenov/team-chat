@@ -1,5 +1,7 @@
 package chat.controllers;
 
+import chat.database.entity.UserEntity;
+import chat.socket.client.auth.AuthorizationClient;
 import chat.socket.client.connection.ConnectionClient;
 import chat.socket.server.TeamChatServerManager;
 import chat.windows.chat.ChatWindow;
@@ -92,14 +94,14 @@ public class MainWindowController {
             ConnectionClient connectionClient = new ConnectionClient(MainWindow.connectedHost);
             boolean onDuty = connectionClient.check();
             if (MainWindow.connectedHost != null || onDuty) {
-
-                ChatWindow chatWindow = new ChatWindow();
-                try {
-                    chatWindow.start(new Stage());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
+                if (userAuthorization()){
+                    ChatWindow chatWindow = new ChatWindow();
+                    try {
+                        chatWindow.start(new Stage());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                  }
             } else {
                 showAlertNoHostDetected();
             }
@@ -150,5 +152,56 @@ public class MainWindowController {
             connectionIcon.setImage(image);
             MainWindow.connectedHost = null;
         }
+    }
+
+    private boolean userAuthorization(){
+        String nickName = login.getText().trim();
+        String pass = password.getText().trim();
+        if (nickName.isEmpty() || pass.isEmpty()){
+            showAlertNoEmptyAuthFields();
+            return false;
+        }
+        String[] authData = new String[2];
+        authData[0] = nickName;
+        authData[1] = pass;
+        AuthorizationClient authorizationClient = new AuthorizationClient(MainWindow.connectedHost, authData);
+        UserEntity userEntity = authorizationClient.auth();
+
+        if (userEntity == null) {
+            showAlertNoUserFound();
+            return false;
+        }
+
+        if (userEntity.isBlocked()){
+            showAlertUserBlocked(userEntity.getNickname());
+            return false;
+        }
+
+        ChatWindow.authorizedUserId = userEntity.getId();
+        return true;
+    }
+
+    private void showAlertNoEmptyAuthFields() {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Внимание!");
+        alert.setHeaderText("Поля логин/пароль не могут быть пустыми");
+
+        alert.showAndWait();
+    }
+
+    private void showAlertNoUserFound() {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Внимание!");
+        alert.setHeaderText("Пользователя не существует");
+
+        alert.showAndWait();
+    }
+
+    private void showAlertUserBlocked(String nickName) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Внимание!");
+        alert.setHeaderText("Пользователь '"+nickName+"' заблокирован");
+
+        alert.showAndWait();
     }
 }
