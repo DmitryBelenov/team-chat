@@ -7,7 +7,6 @@ import chat.objects.User;
 import chat.socket.client.message.MessageClient;
 import chat.socket.client.message.MessageDeliveryClient;
 import chat.socket.client.users.list.UserListClient;
-import chat.socket.server.message.MessageDeliveryServer;
 import chat.windows.chat.ChatWindow;
 import chat.windows.group.CreateGroupWindow;
 import chat.windows.main.MainWindow;
@@ -84,7 +83,7 @@ public class ChatController {
         chatFieldMap.put("Public",chatMainField);
 
         if (!ChatWindow.chatSchedulerStarted) {
-            chatsRefreshScheduler();
+            privateChatsRefreshScheduler();
             ChatWindow.chatSchedulerStarted = true;
         }
 
@@ -160,11 +159,10 @@ public class ChatController {
     }
 
     private List<Tab> fillTabs() {
-        //groups
         List<Tab> tabs = new ArrayList<>();
-        for (int i = 0; i < 2; i++) {
-            tabs.add(fillTab("text area content - " + i, ("new - " + i), false));
-        }
+//        for (int i = 0; i < 2; i++) {
+//            tabs.add(fillTab("text area content - " + i, ("new - " + i), false));
+//        }
         return tabs;
     }
 
@@ -376,17 +374,17 @@ public class ChatController {
         messageClient.send();
     }
 
-    private void chatsRefreshScheduler(){
+    private void privateChatsRefreshScheduler(){
         ses = Executors.newSingleThreadScheduledExecutor();
         ses.scheduleWithFixedDelay(() -> {
-                CompletableFuture<Void> blockJson = CompletableFuture.runAsync(() ->
+                CompletableFuture<Void> refresh = CompletableFuture.runAsync(() ->
                 {
                     Platform.runLater(this::refreshHistory);
                 });
                 try {
-                    blockJson.get();
+                    refresh.get();
                 } catch (Exception e) {
-                    System.out.println("Unable to get new block:" + e);
+                    System.out.println("Unable to refresh private chats:" + e);
                 }
         }, 0, 1, TimeUnit.SECONDS);
     }

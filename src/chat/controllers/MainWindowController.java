@@ -192,7 +192,7 @@ public class MainWindowController {
     private void showAlertNoUserFound() {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Внимание!");
-        alert.setHeaderText("Пользователя не существует");
+        alert.setHeaderText("Пользователя c такой комбинацией логин/пароль не существует");
 
         alert.showAndWait();
     }
