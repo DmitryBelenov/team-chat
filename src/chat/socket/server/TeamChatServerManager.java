@@ -1,6 +1,9 @@
 package chat.socket.server;
 
 import chat.socket.server.auth.AuthorizationServer;
+import chat.socket.server.group.GroupCreatingServer;
+import chat.socket.server.group.GroupListServer;
+import chat.socket.server.message.GroupMessageDeliveryServer;
 import chat.socket.server.message.MessageDeliveryServer;
 import chat.socket.server.message.MessageServer;
 import chat.socket.server.registration.RegistrationServer;
@@ -20,7 +23,10 @@ public class TeamChatServerManager {
     private UserListServer userListServer;
     private MessageServer messageServer;
     private MessageDeliveryServer messageDeliveryServer;
+    private GroupMessageDeliveryServer groupMessageDeliveryServer;
     private AuthorizationServer authorizationServer;
+    private GroupCreatingServer groupCreatingServer;
+    private GroupListServer groupListServer;
 
     public static List<Thread> threadList = Collections.synchronizedList(new ArrayList<>());
 
@@ -30,7 +36,10 @@ public class TeamChatServerManager {
         userListServer = new UserListServer();
         messageServer = new MessageServer();
         messageDeliveryServer = new MessageDeliveryServer();
+        groupMessageDeliveryServer = new GroupMessageDeliveryServer();
         authorizationServer = new AuthorizationServer();
+        groupCreatingServer = new GroupCreatingServer();
+        groupListServer = new GroupListServer();
     }
 
     public void startCommonServer(){
@@ -39,7 +48,10 @@ public class TeamChatServerManager {
         userListServer.startMultiThreadHandler();
         messageServer.startMultiThreadHandler();
         messageDeliveryServer.startMultiThreadHandler();
+        groupMessageDeliveryServer.startMultiThreadHandler();
         authorizationServer.startMultiThreadHandler();
+        groupCreatingServer.startMultiThreadHandler();
+        groupListServer.startMultiThreadHandler();
 
         showServerInfo();
         MainWindow.serverStartButton = true;

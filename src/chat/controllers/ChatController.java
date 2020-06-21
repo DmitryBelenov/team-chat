@@ -1,9 +1,12 @@
 package chat.controllers;
 
+import chat.database.entity.GroupEntity;
 import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
 import chat.objects.Group;
 import chat.objects.User;
+import chat.socket.client.group.GroupListClient;
+import chat.socket.client.message.GroupMessageDeliveryClient;
 import chat.socket.client.message.MessageClient;
 import chat.socket.client.message.MessageDeliveryClient;
 import chat.socket.client.users.list.UserListClient;
@@ -34,6 +37,7 @@ public class ChatController {
 
     private List<String> openedTabs = Collections.synchronizedList(new ArrayList<>());
     private ScheduledExecutorService ses;
+    private ScheduledExecutorService ses_groups;
     private Map<String, TextArea> chatFieldMap = Collections.synchronizedMap(new HashMap<>());
 
     @FXML
@@ -80,11 +84,17 @@ public class ChatController {
 
     @FXML
     public void initialize() {
-        chatFieldMap.put("Public",chatMainField);
+        chatFieldMap.put("Public", chatMainField);
+        openedTabs.add("Public");
 
         if (!ChatWindow.chatSchedulerStarted) {
             privateChatsRefreshScheduler();
             ChatWindow.chatSchedulerStarted = true;
+        }
+
+        if (!ChatWindow.groupChatSchedulerStarted) {
+            groupChatsRefreshScheduler();
+            ChatWindow.groupChatSchedulerStarted = true;
         }
 
         usersPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -98,7 +108,11 @@ public class ChatController {
             MainWindow mainWindow = new MainWindow();
             try {
                 ChatWindow.chatSchedulerStarted = false;
+                ChatWindow.groupChatSchedulerStarted = false;
+                ses_groups.shutdown();
                 ses.shutdown();
+
+                ChatWindow.groupLastMsgDatesMap = Collections.synchronizedMap(new HashMap<>());
 
                 ChatWindow.stage.close();
                 mainWindow.start(new Stage());
@@ -117,6 +131,8 @@ public class ChatController {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+
+                groupsListInitialization();
             } else {
                 showAlertNoUsersForGroupCreating();
             }
@@ -126,7 +142,6 @@ public class ChatController {
             String msg = inputLine.getText().trim();
             if (msg.length() > 0) {
                 sendMessage(msg, "Public", true);
-                chatMainField.appendText(msg+"\n");
                 inputLine.clear();
             }
         });
@@ -136,7 +151,6 @@ public class ChatController {
                 String msg = inputLine.getText().trim();
                 if (msg.length() > 0) {
                     sendMessage(msg, "Public", true);
-                    chatMainField.appendText(msg+"\n");
                     inputLine.clear();
                 }
             }
@@ -152,18 +166,6 @@ public class ChatController {
         });
 
         chatsPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
-
-        List<Tab> chats = fillTabs();
-        if (chats.size() > 0)
-            chatsPane.getTabs().addAll(chats);
-    }
-
-    private List<Tab> fillTabs() {
-        List<Tab> tabs = new ArrayList<>();
-//        for (int i = 0; i < 2; i++) {
-//            tabs.add(fillTab("text area content - " + i, ("new - " + i), false));
-//        }
-        return tabs;
     }
 
     private Tab fillTab(String textAreaContent, String tabName, boolean group) {
@@ -198,9 +200,9 @@ public class ChatController {
         textField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 String msg = textField.getText().trim();
-                if (msg.length() > 0){
+                if (msg.length() > 0) {
                     sendMessage(msg, tabName, group);
-                    textArea.appendText(msg+"\n");
+                    if (!group) textArea.appendText(msg + "\n");
                     textField.clear();
                 }
             }
@@ -217,7 +219,7 @@ public class ChatController {
             String msg = textField.getText().trim();
             if (msg.length() > 0) {
                 sendMessage(msg, tabName, group);
-                textArea.appendText(msg+"\n");
+                if (!group) textArea.appendText(msg + "\n");
                 textField.clear();
             }
         });
@@ -255,7 +257,7 @@ public class ChatController {
         UserListClient userListClient = new UserListClient(MainWindow.connectedHost, alias);
         List<UserEntity> users = userListClient.get();
 
-        if (users.size() > 0) {
+        if (users != null && users.size() > 0) {
             List<User> list = new ArrayList<>();
 
             for (UserEntity user : users) {
@@ -293,6 +295,7 @@ public class ChatController {
 
                     String nickname = val.toString();
                     if (!openedTabs.contains(nickname)) {
+                        // todo textAreaContent наполнять из локального хранилища сообщений
                         Tab userTab = fillTab("", nickname, false);
                         openedTabs.add(nickname);
                         chatsPane.getTabs().add(userTab);
@@ -312,44 +315,58 @@ public class ChatController {
 
     @SuppressWarnings("unchecked")
     private void groupsListInitialization() {
-        ObservableList<Group> groupData = FXCollections.observableArrayList(
-                new Group("Разработка"),
-                new Group("Разное"),
-                new Group("Проверка"));
+        GroupListClient groupListClient = new GroupListClient(MainWindow.connectedHost, ChatWindow.authorizedUserId);
+        List<GroupEntity> groups = groupListClient.get();
 
-        TableColumn nameColumn = new TableColumn("name");
-        nameColumn.setCellValueFactory(new PropertyValueFactory<User, String>("name"));
+        if (groups != null && groups.size() > 0) {
+            List<Group> groupList = new ArrayList<>();
 
-        nameColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.9));
-        nameColumn.setResizable(false);
-
-        groupTable.setItems(groupData);
-        groupTable.getColumns().add(nameColumn);
-
-        groupTable.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Object>) (observableValue, oldValue, newValue) -> {
-            if (groupTable.getSelectionModel().getSelectedItem() != null) {
-                TableView.TableViewSelectionModel<Group> selectionModel = groupTable.getSelectionModel();
-                ObservableList<?> selectedCells = selectionModel.getSelectedCells();
-                @SuppressWarnings("unchecked")
-                TablePosition<Object, ?> tablePosition = (TablePosition<Object, ?>) selectedCells.get(0);
-                Object val = tablePosition.getTableColumn().getCellData(newValue);
-
-                String name = val.toString();
-                if (!openedTabs.contains(name)) {
-                    Tab userTab = fillTab("", name, true);
-                    openedTabs.add(name);
-                    chatsPane.getTabs().add(userTab);
-                } else {
-                    List<Tab> allTabs = chatsPane.getTabs();
-                    for (Tab tab : allTabs) {
-                        if (tab.getText().equals(name)) {
-                            SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
-                            sm.select(tab);
-                        }
-                    }
+            for (GroupEntity groupEntity : groups){
+                if (!groupEntity.getGroupName().equals("Public")){
+                    Group groupView = new Group(groupEntity.getGroupName());
+                    groupList.add(groupView);
                 }
             }
-        });
+
+            ObservableList<Group> groupData = FXCollections.observableArrayList(groupList);
+
+            TableColumn nameColumn = new TableColumn("name");
+            nameColumn.setCellValueFactory(new PropertyValueFactory<User, String>("name"));
+
+            nameColumn.prefWidthProperty().bind(usersTable.widthProperty().multiply(0.9));
+            nameColumn.setResizable(false);
+
+            groupTable.setItems(groupData);
+            groupTable.getColumns().add(nameColumn);
+
+            groupTable.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Object>) (observableValue, oldValue, newValue) -> {
+                if (groupTable.getSelectionModel().getSelectedItem() != null) {
+                    TableView.TableViewSelectionModel<Group> selectionModel = groupTable.getSelectionModel();
+                    ObservableList<?> selectedCells = selectionModel.getSelectedCells();
+                    @SuppressWarnings("unchecked")
+                    TablePosition<Object, ?> tablePosition = (TablePosition<Object, ?>) selectedCells.get(0);
+                    Object val = tablePosition.getTableColumn().getCellData(newValue);
+
+                    String name = val.toString();
+                    if (!openedTabs.contains(name)) {
+                        // todo textAreaContent наполнять из локального хранилища сообщений
+                        Tab userTab = fillTab("", name, true);
+                        openedTabs.add(name);
+                        chatsPane.getTabs().add(userTab);
+                    } else {
+                        List<Tab> allTabs = chatsPane.getTabs();
+                        for (Tab tab : allTabs) {
+                            if (tab.getText().equals(name)) {
+                                SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
+                                sm.select(tab);
+                            }
+                        }
+                    }
+
+                    usersListInitialization("group_" + name);
+                }
+            });
+        }
     }
 
     private void showAlertNoUsersForGroupCreating() {
@@ -360,7 +377,7 @@ public class ChatController {
         alert.showAndWait();
     }
 
-    private void sendMessage(String msg, String nameTo, boolean groupMsg){
+    private void sendMessage(String msg, String nameTo, boolean groupMsg) {
         MessageEntity message = new MessageEntity();
         message.setId(UUID.randomUUID().toString());
         message.setMsgText(msg);
@@ -374,33 +391,50 @@ public class ChatController {
         messageClient.send();
     }
 
-    private void privateChatsRefreshScheduler(){
+    private void privateChatsRefreshScheduler() {
         ses = Executors.newSingleThreadScheduledExecutor();
         ses.scheduleWithFixedDelay(() -> {
-                CompletableFuture<Void> refresh = CompletableFuture.runAsync(() ->
-                {
-                    Platform.runLater(this::refreshHistory);
-                });
-                try {
-                    refresh.get();
-                } catch (Exception e) {
-                    System.out.println("Unable to refresh private chats:" + e);
-                }
-        }, 0, 1, TimeUnit.SECONDS);
+            CompletableFuture<Void> refresh = CompletableFuture.runAsync(() ->
+            {
+                Platform.runLater(this::refreshHistory);
+            });
+            try {
+                refresh.get();
+            } catch (Exception e) {
+                System.out.println("Unable to refresh private chats:" + e);
+            }
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
-    private synchronized void refreshHistory(){
+    private void groupChatsRefreshScheduler() {
+        ses_groups = Executors.newSingleThreadScheduledExecutor();
+        ses_groups.scheduleWithFixedDelay(() -> {
+            CompletableFuture<Void> refresh = CompletableFuture.runAsync(() ->
+            {
+                Platform.runLater(this::refreshGroupsHistory);
+            });
+            try {
+                refresh.get();
+            } catch (Exception e) {
+                System.out.println("Unable to refresh group chats:" + e);
+            }
+        }, 0, 500, TimeUnit.MILLISECONDS);
+    }
+
+    private synchronized void refreshHistory() {
         MessageDeliveryClient messageDeliveryClient = new MessageDeliveryClient(MainWindow.connectedHost, ChatWindow.authorizedUserId);
         List<MessageEntity> messages = messageDeliveryClient.refresh();
-        if (messages.size() > 0){
-            if (chatFieldMap.size() > 0){
+        if (messages.size() > 0) {
+            if (chatFieldMap.size() > 0) {
                 for (MessageEntity me : messages) {
                     String tabName = me.getFromId();
                     if (!openedTabs.contains(tabName)) {
+                        // todo textAreaContent наполнять из локального хранилища сообщений
                         Tab userTab = fillTab("", tabName, false);
                         openedTabs.add(tabName);
                         chatsPane.getTabs().add(userTab);
                     } else {
+                        // todo не делать фокус а подключить счетчик сообщений
                         List<Tab> allTabs = chatsPane.getTabs();
                         for (Tab tab : allTabs) {
                             if (tab.getText().equals(tabName)) {
@@ -411,9 +445,52 @@ public class ChatController {
                     }
 
                     TextArea chatTextArea = chatFieldMap.get(me.getFromId());
-                    chatTextArea.appendText(me.getMsgText()+"\n");
+                    chatTextArea.appendText(me.getMsgText() + "\n");
                 }
             }
         }
+    }
+
+    private synchronized void refreshGroupsHistory() {
+        GroupMessageDeliveryClient groupMessageDeliveryClient = new GroupMessageDeliveryClient(MainWindow.connectedHost, ChatWindow.authorizedUserId);
+        List<MessageEntity> messages = groupMessageDeliveryClient.refresh();
+        if (messages.size() > 0) {
+            if (chatFieldMap.size() > 0) {
+                for (MessageEntity me : messages) {
+                    Date lustReceivedMsgDate = ChatWindow.groupLastMsgDatesMap.get(me.getToId());
+                    if (lustReceivedMsgDate != null) {
+                        if (lustReceivedMsgDate.before(me.getSendDate())) {
+                            groupChatsMessageRefresh(me);
+                        }
+                    } else {
+                        groupChatsMessageRefresh(me);
+                    }
+                }
+            }
+        }
+    }
+
+    private synchronized void groupChatsMessageRefresh(MessageEntity messageEntity){
+        String groupName = messageEntity.getToId();
+        if (!openedTabs.contains(messageEntity.getToId())) {
+            // todo textAreaContent наполнять из локального хранилища сообщений
+            Tab userTab = fillTab("", groupName, false);
+            openedTabs.add(groupName);
+            chatsPane.getTabs().add(userTab);
+        } else {
+            // todo не делать фокус а подключить счетчик сообщений
+            List<Tab> allTabs = chatsPane.getTabs();
+            for (Tab tab : allTabs) {
+                if (tab.getText().equals(groupName)) {
+                    SingleSelectionModel<Tab> sm = chatsPane.getSelectionModel();
+                    sm.select(tab);
+                }
+            }
+        }
+
+        TextArea chatTextArea = chatFieldMap.get(groupName);
+        chatTextArea.appendText(messageEntity.getMsgText() + "\n");
+
+        ChatWindow.groupLastMsgDatesMap.put(groupName, messageEntity.getSendDate());
     }
 }

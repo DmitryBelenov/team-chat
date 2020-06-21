@@ -8,12 +8,21 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 public class ChatWindow extends Application implements Window {
 
     public static Stage stage;
     public static String authorizedUserId;
 
     public static boolean chatSchedulerStarted = false;
+    public static boolean groupChatSchedulerStarted = false;
+
+    // брать актуальную версию маппинга из локального хранилища при авторизации
+    public static Map<String, Date> groupLastMsgDatesMap = Collections.synchronizedMap(new HashMap<>());
 
     @Override
     public void start(Stage stage) throws Exception {

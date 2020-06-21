@@ -1,9 +1,12 @@
 package chat.controllers;
 
 import chat.database.entity.UserEntity;
+import chat.objects.GroupCommonData;
 import chat.objects.GroupUserTableView;
-import chat.objects.User;
+import chat.socket.client.group.GroupCreatingClient;
 import chat.socket.client.users.list.UserListClient;
+import chat.windows.chat.ChatWindow;
+import chat.windows.group.CreateGroupWindow;
 import chat.windows.main.MainWindow;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -44,8 +47,10 @@ public class CreateGroupController {
 
         List<GroupUserTableView> groupUserTableViews = new ArrayList<>();
         for (UserEntity userEntity : userEntities){
-            GroupUserTableView groupUserTableView = new GroupUserTableView(userEntity.getNickname(), userEntity.getUsername(),false);
-            groupUserTableViews.add(groupUserTableView);
+            if (!userEntity.getId().equals(ChatWindow.authorizedUserId)) {
+                GroupUserTableView groupUserTableView = new GroupUserTableView(userEntity.getNickname(), userEntity.getUsername(), false);
+                groupUserTableViews.add(groupUserTableView);
+            }
         }
 
         ObservableList<TableColumn<GroupUserTableView, ?>> columns = usersTableView.getColumns();
@@ -75,6 +80,51 @@ public class CreateGroupController {
                     chosen.add(user);
                 }
             }
+            String name = groupName.getText().trim();
+
+            if (name.isEmpty()) {
+                groupNameRequired();
+            } else if (chosen.isEmpty()){
+                groupMembersRequired();
+            } else {
+                List<String> groupUsers = new ArrayList<>();
+                for (GroupUserTableView groupUserTableView : chosen){
+                    groupUsers.add(groupUserTableView.getNick());
+                }
+                GroupCommonData groupCommonData = new GroupCommonData(groupUsers, ChatWindow.authorizedUserId, name);
+                GroupCreatingClient groupCreatingClient = new GroupCreatingClient(MainWindow.connectedHost, groupCommonData);
+                String result = groupCreatingClient.createGroup();
+                if (result.endsWith("' уже зарегистрирована в системе")){
+                    groupName.clear();
+                } else {
+                    CreateGroupWindow.getPrimaryStage().close();
+                }
+                groupCreatedInfo(result);
+            }
         });
+    }
+
+    private void groupCreatedInfo(String resultMessage) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Создание группы");
+        alert.setContentText(resultMessage);
+
+        alert.showAndWait();
+    }
+
+    private void groupNameRequired() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Создание группы");
+        alert.setContentText("Необходимо указать название группы");
+
+        alert.showAndWait();
+    }
+
+    private void groupMembersRequired() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Создание группы");
+        alert.setContentText("Необходимо добавить в группу как минимум одного участника");
+
+        alert.showAndWait();
     }
 }

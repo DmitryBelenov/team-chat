@@ -1,6 +1,5 @@
 package chat.socket.client.auth;
 
-import chat.database.DBConnection;
 import chat.database.entity.UserEntity;
 import chat.socket.server.ServerPortManager;
 

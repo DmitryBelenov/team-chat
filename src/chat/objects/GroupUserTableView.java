@@ -5,7 +5,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
-public class GroupUserTableView {
+import java.io.Serializable;
+
+public class GroupUserTableView implements Serializable {
+
+    private static final long serialVersionUID = 5919478277520766974L;
 
     private final StringProperty nick;
     private final BooleanProperty add;
