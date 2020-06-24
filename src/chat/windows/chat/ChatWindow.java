@@ -17,6 +17,7 @@ public class ChatWindow extends Application implements Window {
 
     public static Stage stage;
     public static String authorizedUserId;
+    public static String authorizedNickName;
 
     public static boolean chatSchedulerStarted = false;
     public static boolean groupChatSchedulerStarted = false;

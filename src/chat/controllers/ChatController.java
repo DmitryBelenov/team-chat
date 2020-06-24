@@ -3,6 +3,9 @@ package chat.controllers;
 import chat.database.entity.GroupEntity;
 import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
+import chat.json.JsonMessageStorage;
+import chat.json.chat.Chat;
+import chat.json.chat.Message;
 import chat.objects.Group;
 import chat.objects.User;
 import chat.socket.client.group.GroupListClient;
@@ -39,6 +42,8 @@ public class ChatController {
     private ScheduledExecutorService ses;
     private ScheduledExecutorService ses_groups;
     private Map<String, TextArea> chatFieldMap = Collections.synchronizedMap(new HashMap<>());
+    private boolean needUpdateGroupsChats = true;
+    private boolean needUpdateChats = true;
 
     @FXML
     private ScrollPane usersPane;
@@ -86,6 +91,17 @@ public class ChatController {
     public void initialize() {
         chatFieldMap.put("Public", chatMainField);
         openedTabs.add("Public");
+
+        JsonMessageStorage.init(ChatWindow.authorizedUserId);
+        Chat publicChatContent = JsonMessageStorage.get("Public");
+
+        if (publicChatContent != null) {
+            StringBuilder messages = new StringBuilder();
+            for (Message message : publicChatContent.getMessages()) {
+                messages.append(message.getText()).append("\n");
+            }
+            chatMainField.setText(messages.toString());
+        }
 
         if (!ChatWindow.chatSchedulerStarted) {
             privateChatsRefreshScheduler();
@@ -202,7 +218,11 @@ public class ChatController {
                 String msg = textField.getText().trim();
                 if (msg.length() > 0) {
                     sendMessage(msg, tabName, group);
-                    if (!group) textArea.appendText(msg + "\n");
+                    if (group) {
+                        needUpdateGroupsChats = true;
+                    } else {
+                        needUpdateChats = true;
+                    }
                     textField.clear();
                 }
             }
@@ -219,7 +239,11 @@ public class ChatController {
             String msg = textField.getText().trim();
             if (msg.length() > 0) {
                 sendMessage(msg, tabName, group);
-                if (!group) textArea.appendText(msg + "\n");
+                if (group) {
+                    needUpdateGroupsChats = true;
+                } else {
+                    needUpdateChats = true;
+                }
                 textField.clear();
             }
         });
@@ -296,7 +320,16 @@ public class ChatController {
                     String nickname = val.toString();
                     if (!openedTabs.contains(nickname)) {
                         // todo textAreaContent наполнять из локального хранилища сообщений
-                        Tab userTab = fillTab("", nickname, false);
+
+                        Chat chatStory = JsonMessageStorage.get(nickname);
+                        StringBuilder messages = new StringBuilder();
+                        if (chatStory != null) {
+                            for (Message message : chatStory.getMessages()) {
+                                messages.append(message.getText()).append("\n");
+                            }
+                        }
+
+                        Tab userTab = fillTab(messages.toString(), nickname, false);
                         openedTabs.add(nickname);
                         chatsPane.getTabs().add(userTab);
                     } else {
@@ -321,8 +354,8 @@ public class ChatController {
         if (groups != null && groups.size() > 0) {
             List<Group> groupList = new ArrayList<>();
 
-            for (GroupEntity groupEntity : groups){
-                if (!groupEntity.getGroupName().equals("Public")){
+            for (GroupEntity groupEntity : groups) {
+                if (!groupEntity.getGroupName().equals("Public")) {
                     Group groupView = new Group(groupEntity.getGroupName());
                     groupList.add(groupView);
                 }
@@ -350,7 +383,16 @@ public class ChatController {
                     String name = val.toString();
                     if (!openedTabs.contains(name)) {
                         // todo textAreaContent наполнять из локального хранилища сообщений
-                        Tab userTab = fillTab("", name, true);
+
+                        Chat chatStory = JsonMessageStorage.get(name);
+                        StringBuilder messages = new StringBuilder();
+                        if (chatStory != null) {
+                            for (Message message : chatStory.getMessages()) {
+                                messages.append(message.getText()).append("\n");
+                            }
+                        }
+
+                        Tab userTab = fillTab(messages.toString(), name, true);
                         openedTabs.add(name);
                         chatsPane.getTabs().add(userTab);
                     } else {
@@ -367,6 +409,8 @@ public class ChatController {
                 }
             });
         }
+
+        JsonMessageStorage.initializeGroupChatMapping(ChatWindow.authorizedUserId);
     }
 
     private void showAlertNoUsersForGroupCreating() {
@@ -378,17 +422,26 @@ public class ChatController {
     }
 
     private void sendMessage(String msg, String nameTo, boolean groupMsg) {
+        Date messageDate = new Date();
+
         MessageEntity message = new MessageEntity();
         message.setId(UUID.randomUUID().toString());
         message.setMsgText(msg);
         message.setFromId(ChatWindow.authorizedUserId);
         message.setToId(nameTo);
         message.setGroupMsg(groupMsg);
-        message.setSendDate(new Date());
+        message.setSendDate(messageDate);
         message.setReceived(false);
 
         MessageClient messageClient = new MessageClient(MainWindow.connectedHost, message);
         messageClient.send();
+
+        Message jsonMsg = new Message();
+        jsonMsg.setFrom(ChatWindow.authorizedUserId);
+        jsonMsg.setTo(nameTo);
+        jsonMsg.setText(msg);
+        jsonMsg.setMessageDate(messageDate);
+        JsonMessageStorage.addChatMessage(nameTo, jsonMsg);
     }
 
     private void privateChatsRefreshScheduler() {
@@ -403,7 +456,7 @@ public class ChatController {
             } catch (Exception e) {
                 System.out.println("Unable to refresh private chats:" + e);
             }
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     private void groupChatsRefreshScheduler() {
@@ -418,7 +471,7 @@ public class ChatController {
             } catch (Exception e) {
                 System.out.println("Unable to refresh group chats:" + e);
             }
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     private synchronized void refreshHistory() {
@@ -430,7 +483,16 @@ public class ChatController {
                     String tabName = me.getFromId();
                     if (!openedTabs.contains(tabName)) {
                         // todo textAreaContent наполнять из локального хранилища сообщений
-                        Tab userTab = fillTab("", tabName, false);
+
+                        Chat chatStory = JsonMessageStorage.get(tabName);
+                        StringBuilder content = new StringBuilder();
+                        if (chatStory != null) {
+                            for (Message message : chatStory.getMessages()) {
+                                content.append(message.getText()).append("\n");
+                            }
+                        }
+
+                        Tab userTab = fillTab(content.toString(), tabName, false);
                         openedTabs.add(tabName);
                         chatsPane.getTabs().add(userTab);
                     } else {
@@ -444,9 +506,29 @@ public class ChatController {
                         }
                     }
 
-                    TextArea chatTextArea = chatFieldMap.get(me.getFromId());
-                    chatTextArea.appendText(me.getMsgText() + "\n");
+                    TextArea chatTextArea = chatFieldMap.get(tabName);
+
+                    Message message = new Message();
+                    message.setText(me.getMsgText());
+                    message.setMessageDate(me.getSendDate());
+
+                    JsonMessageStorage.addChatMessage(tabName, message);
+
+                    Chat chatStory = JsonMessageStorage.get(tabName);
+                    StringBuilder story = new StringBuilder();
+                    if (chatStory != null) {
+                        for (Message msg : chatStory.getMessages()) {
+                            story.append(msg.getText()).append("\n");
+                        }
+                    }
+
+                    chatTextArea.setText(story.toString());
                 }
+            }
+        } else {
+            if (needUpdateChats) {
+                JsonMessageStorage.updateFromLocalStorage(chatFieldMap, false);
+                needUpdateChats = false;
             }
         }
     }
@@ -467,14 +549,28 @@ public class ChatController {
                     }
                 }
             }
+        } else {
+            if (needUpdateGroupsChats) {
+                JsonMessageStorage.updateFromLocalStorage(chatFieldMap, true);
+                needUpdateGroupsChats = false;
+            }
         }
     }
 
-    private synchronized void groupChatsMessageRefresh(MessageEntity messageEntity){
+    private synchronized void groupChatsMessageRefresh(MessageEntity messageEntity) {
         String groupName = messageEntity.getToId();
         if (!openedTabs.contains(messageEntity.getToId())) {
             // todo textAreaContent наполнять из локального хранилища сообщений
-            Tab userTab = fillTab("", groupName, false);
+
+            Chat chatStory = JsonMessageStorage.get(groupName);
+            StringBuilder content = new StringBuilder();
+            if (chatStory != null) {
+                for (Message message : chatStory.getMessages()) {
+                    content.append(message.getText()).append("\n");
+                }
+            }
+
+            Tab userTab = fillTab(content.toString(), groupName, false);
             openedTabs.add(groupName);
             chatsPane.getTabs().add(userTab);
         } else {
@@ -489,7 +585,24 @@ public class ChatController {
         }
 
         TextArea chatTextArea = chatFieldMap.get(groupName);
-        chatTextArea.appendText(messageEntity.getMsgText() + "\n");
+
+        if (!messageEntity.getFromId().equals(ChatWindow.authorizedUserId)) {
+            Message message = new Message();
+            message.setText(messageEntity.getMsgText());
+            message.setMessageDate(messageEntity.getSendDate());
+
+            JsonMessageStorage.addChatMessage(groupName, message);
+        }
+
+        Chat chatStory = JsonMessageStorage.get(groupName);
+        StringBuilder story = new StringBuilder();
+        if (chatStory != null) {
+            for (Message msg : chatStory.getMessages()) {
+                story.append(msg.getText()).append("\n");
+            }
+        }
+
+        chatTextArea.setText(story.toString());
 
         ChatWindow.groupLastMsgDatesMap.put(groupName, messageEntity.getSendDate());
     }

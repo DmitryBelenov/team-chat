@@ -178,6 +178,7 @@ public class MainWindowController {
         }
 
         ChatWindow.authorizedUserId = userEntity.getId();
+        ChatWindow.authorizedNickName = userEntity.getNickname();
         return true;
     }
 

@@ -4,6 +4,7 @@ import chat.database.entity.GroupEntity;
 import chat.database.entity.MessageEntity;
 import chat.database.entity.UserEntity;
 import chat.database.mappers.GlobalMapper;
+import chat.json.chat.Message;
 import chat.objects.GroupCommonData;
 import chat.utils.CryptoUtils;
 import org.apache.ibatis.io.Resources;
@@ -153,7 +154,8 @@ public class DBConnection {
     }
 
     public static String createGroup(GroupCommonData groupCommonData) {
-        String result = "Группа '" + groupCommonData.getGroupName() + "' создана\nУчастников: " + groupCommonData.getGroupUsers().size() + 1;
+        String name = groupCommonData.getGroupName();
+        String result = "Группа '" + name + "' создана\nУчастников: " + (groupCommonData.getGroupUsers().size() + 1);
         SqlSessionFactory sqlSessionFactory = getFactory();
         if (sqlSessionFactory != null) {
             List<String> groupUserIds = new ArrayList<>();
@@ -183,6 +185,17 @@ public class DBConnection {
 
                     persist(groupEntity);
                 }
+
+                MessageEntity messageEntity = new MessageEntity();
+                messageEntity.setId(UUID.randomUUID().toString());
+                messageEntity.setFromId(name);
+                messageEntity.setToId(name);
+                messageEntity.setReceived(false);
+                messageEntity.setGroupMsg(true);
+                messageEntity.setMsgText("* Вы были добавлены в группу '"+name+"', добро пожаловать!");
+                messageEntity.setSendDate(new Date());
+
+                persist(messageEntity);
             }
         }
         return result;
