@@ -34,17 +34,20 @@
                                 <content>
                                   <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="528.0" prefWidth="582.0">
                                        <children>
-                                          <TextArea fx:id="chatMainField" editable="false" prefHeight="529.0" prefWidth="583.0" wrapText="true" />
+                                          <TextArea fx:id="chatMainField" editable="false" prefHeight="529.0" prefWidth="583.0" wrapText="true">
+                                             <font>
+                                                <Font name="Verdana" size="14.0" />
+                                             </font></TextArea>
                                        </children>
                                     </AnchorPane>
                                 </content>
                               </ScrollPane>
-                              <TextField fx:id="inputLine" layoutY="529.0" prefHeight="30.0" prefWidth="468.0" promptText="Введите текст">
+                              <TextField fx:id="inputLine" layoutY="529.0" prefHeight="30.0" prefWidth="423.0" promptText="Введите текст">
                                  <font>
                                     <Font name="Verdana" size="12.0" />
                                  </font>
                               </TextField>
-                              <Button fx:id="send" layoutX="468.0" layoutY="530.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="50.0" text="^">
+                              <Button fx:id="send" layoutX="423.0" layoutY="530.0" mnemonicParsing="false" prefHeight="29.0" prefWidth="50.0" text="^">
                               <font>
                                  <Font name="Verdana" size="12.0" />
                               </font>
@@ -54,6 +57,11 @@
                                     <Font name="Verdana" size="12.0" />
                                  </font>
                               </Button>
+                              <MenuButton fx:id="smiles" layoutX="473.0" layoutY="530.0" mnemonicParsing="false" popupSide="TOP" prefHeight="29.0" prefWidth="45.0" text="😉">
+                                 <font>
+                                    <Font name="Verdana" size="12.0" />
+                                 </font>
+                              </MenuButton>
                            </children>
                         </AnchorPane>
                     </content>

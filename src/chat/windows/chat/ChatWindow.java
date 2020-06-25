@@ -22,7 +22,7 @@ public class ChatWindow extends Application implements Window {
     public static boolean chatSchedulerStarted = false;
     public static boolean groupChatSchedulerStarted = false;
 
-    // брать актуальную версию маппинга из локального хранилища при авторизации
+    // актуальная версия маппинга инициализируется из локального хранилища при авторизации
     public static Map<String, Date> groupLastMsgDatesMap = Collections.synchronizedMap(new HashMap<>());
 
     @Override

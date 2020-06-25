@@ -21,6 +21,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Side;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
@@ -30,6 +31,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -71,6 +73,9 @@ public class ChatController {
 
     @FXML
     private Button fileChooser;
+
+    @FXML
+    private MenuButton smiles;
 
     @FXML
     private MenuButton menu;
@@ -182,17 +187,50 @@ public class ChatController {
         });
 
         chatsPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+
+        ChatSmilesManager chatSmilesManager = new ChatSmilesManager(inputLine);
+        MenuItem[] smileItems = chatSmilesManager.fillSmiles();
+        smiles.getItems().addAll(smileItems);
+    }
+
+    private class ChatSmilesManager {
+        private final String[] smiles = {"\uD83D\uDE04","\uD83D\uDE1E","\uD83D\uDE29","\uD83D\uDE0E","❤",
+                                         "\uD83D\uDC4B","\uD83D\uDE02","\uD83D\uDC7D"};
+        //😄 😞 😩 😎 ❤ 👋 😂 👽
+
+        private TextField input;
+
+        ChatSmilesManager(TextField input) {
+            this.input = input;
+        }
+
+        private MenuItem[] fillSmiles(){
+            MenuItem[] menuItems = new MenuItem[smiles.length];
+            for (int i = 0; i < smiles.length; i++) {
+                String smile = smiles[i];
+                MenuItem item = new MenuItem(smile);
+
+                item.setOnAction(event -> {
+                    input.appendText(smile);
+                });
+
+                menuItems[i] = item;
+            }
+            return menuItems;
+        }
     }
 
     private Tab fillTab(String textAreaContent, String tabName, boolean group) {
         Tab tab = new Tab(tabName);
 
+        Font fontChat = new Font("Verdana", 14);
         TextArea textArea = new TextArea();
         textArea.setEditable(false);
         textArea.setWrapText(true);
         textArea.setPrefHeight(529);
         textArea.setPrefWidth(583);
         textArea.setText(textAreaContent);
+        textArea.setFont(fontChat);
 
         chatFieldMap.put(tabName, textArea);
 
@@ -210,7 +248,7 @@ public class ChatController {
         TextField textField = new TextField();
         textField.setLayoutY(529);
         textField.setPrefHeight(30);
-        textField.setPrefWidth(468);
+        textField.setPrefWidth(423);
         textField.setFont(font);
         textField.setPromptText("Введите текст");
         textField.setOnKeyPressed(event -> {
@@ -229,7 +267,7 @@ public class ChatController {
         });
 
         Button send = new Button("^");
-        send.setLayoutX(468);
+        send.setLayoutX(423);
         send.setLayoutY(530);
         send.setMnemonicParsing(false);
         send.setPrefHeight(29);
@@ -248,6 +286,18 @@ public class ChatController {
             }
         });
 
+        MenuButton smiles = new MenuButton("\uD83D\uDE09");
+        smiles.setPopupSide(Side.TOP);
+        smiles.setContentDisplay(ContentDisplay.LEFT);
+        smiles.setFont(font);
+        smiles.setLayoutX(473);
+        smiles.setLayoutY(530);
+        smiles.setPrefHeight(29);
+        smiles.setPrefWidth(45);
+        ChatSmilesManager chatSmilesManager = new ChatSmilesManager(textField);
+        MenuItem[] smileItems = chatSmilesManager.fillSmiles();
+        smiles.getItems().addAll(smileItems);
+
         Button file = new Button("Файл");
         file.setLayoutX(518);
         file.setLayoutY(530);
@@ -264,7 +314,7 @@ public class ChatController {
             }
         });
 
-        AnchorPane tabContent = new AnchorPane(scrollPane, textField, send, file);
+        AnchorPane tabContent = new AnchorPane(scrollPane, textField, send, smiles, file);
         tabContent.setPrefWidth(200);
         tabContent.setPrefHeight(180);
 
@@ -426,12 +476,14 @@ public class ChatController {
 
         MessageEntity message = new MessageEntity();
         message.setId(UUID.randomUUID().toString());
-        message.setMsgText(msg);
         message.setFromId(ChatWindow.authorizedUserId);
         message.setToId(nameTo);
         message.setGroupMsg(groupMsg);
         message.setSendDate(messageDate);
         message.setReceived(false);
+
+        String text = "("+new SimpleDateFormat("HH:mm dd.MM").format(messageDate)+")\n#"+ChatWindow.authorizedNickName+": "+msg;
+        message.setMsgText(text);
 
         MessageClient messageClient = new MessageClient(MainWindow.connectedHost, message);
         messageClient.send();
@@ -439,7 +491,7 @@ public class ChatController {
         Message jsonMsg = new Message();
         jsonMsg.setFrom(ChatWindow.authorizedUserId);
         jsonMsg.setTo(nameTo);
-        jsonMsg.setText(msg);
+        jsonMsg.setText(text);
         jsonMsg.setMessageDate(messageDate);
         JsonMessageStorage.addChatMessage(nameTo, jsonMsg);
     }
@@ -482,8 +534,6 @@ public class ChatController {
                 for (MessageEntity me : messages) {
                     String tabName = me.getFromId();
                     if (!openedTabs.contains(tabName)) {
-                        // todo textAreaContent наполнять из локального хранилища сообщений
-
                         Chat chatStory = JsonMessageStorage.get(tabName);
                         StringBuilder content = new StringBuilder();
                         if (chatStory != null) {
@@ -560,8 +610,6 @@ public class ChatController {
     private synchronized void groupChatsMessageRefresh(MessageEntity messageEntity) {
         String groupName = messageEntity.getToId();
         if (!openedTabs.contains(messageEntity.getToId())) {
-            // todo textAreaContent наполнять из локального хранилища сообщений
-
             Chat chatStory = JsonMessageStorage.get(groupName);
             StringBuilder content = new StringBuilder();
             if (chatStory != null) {
